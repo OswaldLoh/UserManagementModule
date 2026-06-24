@@ -12,42 +12,48 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {    // User schema
-  id         Int          @id @default(autoincrement())
+model User {
+  id         Int        @id @default(autoincrement())
   name       String
-  email      String       @unique
+  email      String     @unique
   department String
   position   String
   status     UserStatus
   roleId     Int
-  role       Role         @relation(fields: [roleId], references: [roleId])
-  createdAt  DateTime     @default(now())
-  updatedAt  DateTime     @updatedAt
+  role       Role       @relation(fields: [roleId], references: [id])
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
 }
 
 model Role {
-  roleId        Int       @id @default(autoincrement())
-  name          String    
-  description   String  
-  isSystem      Boolean
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @default(now())
+  id          Int              @id @default(autoincrement())
+  name        String           @unique
+  description String
+  isSystem    Boolean
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  permissions RolePermission[]
+  users       User[]
 }
 
 model Permission {
-  permissionID    Int     @id @default(autoincrement())
-  resource        String
-  action          String
-  label           String
+  id       Int    @id @default(autoincrement())
+  resource String
+  action   String
+  label    String
 
-  @@unique([resource, action])      // Unique pair to ensure permission is not duplicated
+  roles RolePermission[]
+
+  @@unique([resource, action]) // Unique pair to ensure permission is not duplicated
 }
 
 model RolePermission {
-  roleId          Int   
-  permissionID    Int   
-  role            Role          @relation(fields: [roleId], references: [roleId])
-  permission      Permission    @relation(fields: [permissionId], references: [permissionId])
+  roleId       Int
+  permissionId Int
+  role         Role       @relation(fields: [roleId], references: [id])
+  permission   Permission @relation(fields: [permissionId], references: [id])
+
+  @@id([roleId, permissionId])
 }
 
 enum UserStatus {
