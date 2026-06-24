@@ -1,122 +1,104 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import heroImg from './assets/hero.png'
-import './App.css'
+import { useState, useEffect } from 'react';
+import axios from 'axios';
 
-function App() {
-  const [count, setCount] = useState(0)
-
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+// TypeScript definitions for your data
+interface User {
+  id: number;
+  name: string;
+  email: string;
+  department: string;
+  position: string;
+  status: string;
+  role: { name: string };
 }
 
-export default App
+export default function App() {
+  // 1. STATE MANAGEMENT
+  const [activeRole, setActiveRole] = useState<string>('Admin'); // Mock Auth State
+  const [users, setUsers] = useState<User[]>([]);
+  const [error, setError] = useState<string>('');
+  const [loading, setLoading] = useState<boolean>(false);
+
+  // 2. DATA FETCHING (Runs every time activeRole changes)
+  useEffect(() => {
+    const fetchUsers = async () => {
+      setLoading(true);
+      setError('');
+      
+      try {
+        const response = await axios.get('http://localhost:3000/api/users', {
+          headers: { 'x-actor-role': activeRole }
+        });
+        setUsers(response.data);
+      } catch (err: any) {
+        // Handle the 403 Forbidden error we set up in the backend
+        setError(err.response?.data?.error || 'Failed to fetch users');
+        setUsers([]); // Clear list on error
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [activeRole]); // The dependency array: triggers the effect when activeRole updates
+
+  // 3. UI RENDERING
+  return (
+    <div style={{ padding: '20px', fontFamily: 'sans-serif' }}>
+      <h1>User Access Management</h1>
+      
+      {/* Mock Authentication Selector */}
+      <div style={{ marginBottom: '20px', padding: '10px', backgroundColor: '#f0f0f0' }}>
+        <label style={{ fontWeight: 'bold', marginRight: '10px' }}>Simulate Role:</label>
+        <select 
+          value={activeRole} 
+          onChange={(e) => setActiveRole(e.target.value)}
+          style={{ padding: '5px' }}
+        >
+          <option value="Admin">Admin</option>
+          <option value="Manager">Manager</option>
+          <option value="Viewer">Viewer</option>
+          <option value="Hacker">Unauthorized User (Test 403)</option>
+        </select>
+      </div>
+
+      {/* State Feedback */}
+      {loading && <p>Loading users...</p>}
+      {error && <p style={{ color: 'red', fontWeight: 'bold' }}>{error}</p>}
+
+      {/* User Data Table */}
+      {!loading && !error && users.length > 0 && (
+        <table border={1} cellPadding={10} style={{ borderCollapse: 'collapse', width: '100%' }}>
+          <thead>
+            <tr style={{ backgroundColor: '#ddd' }}>
+              <th>ID</th>
+              <th>Name</th>
+              <th>Email</th>
+              <th>Department</th>
+              <th>Role</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {users.map((user) => (
+              <tr key={user.id}>
+                <td>{user.id}</td>
+                <td>{user.name}</td>
+                <td>{user.email}</td>
+                <td>{user.department}</td>
+                <td>{user.role.name}</td>
+                <td>
+                  <span style={{ 
+                    color: user.status === 'ACTIVE' ? 'green' : user.status === 'INACTIVE' ? 'red' : 'orange' 
+                  }}>
+                    {user.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
