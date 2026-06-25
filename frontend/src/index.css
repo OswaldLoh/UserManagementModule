@@ -376,6 +376,12 @@ body {
   color: var(--red);
   transform: scale(1.1);
 }
+.btn-icon-success:hover {
+  background: rgba(16,185,129,0.1);
+  border-color: rgba(16,185,129,0.4);
+  color: var(--green);
+  transform: scale(1.1);
+}
 
 /* ─── Table ─── */
 .table-wrapper {

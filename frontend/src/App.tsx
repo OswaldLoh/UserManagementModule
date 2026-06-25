@@ -382,6 +382,19 @@ export default function App() {
     }
   };
 
+  const handleReactivate = async (user: User) => {
+    if (!window.confirm(`Reactivate "${user.name}"? Their status will be set to Active.`)) return;
+    try {
+      const res = await axios.patch(`${API}/api/users/${user.id}/reactivate`, {}, {
+        headers: { 'x-actor-role': activeRole },
+      });
+      setUsers(prev => prev.map(u => u.id === res.data.id ? res.data : u));
+      addToast(`"${user.name}" has been reactivated.`, 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to reactivate user.', 'error');
+    }
+  };
+
   const handleUserCreated = (user: User) => {
     setUsers(prev => [...prev, user]);
     setShowModal(false);
@@ -412,7 +425,7 @@ export default function App() {
   const canEditIdentity  = hasPermission('user', 'update-identity');
   const canDeactivate    = hasPermission('user', 'deactivate');
   // Determine if the current actor can edit users
-  const canEdit = !usersError && roles.length > 0;
+  const canEdit = !usersError && roles.length > 0 && hasPermission('user', 'update');
 
   return (
     <div className="app-layout">
@@ -647,15 +660,26 @@ export default function App() {
                                     ✏️
                                   </button>
                                 )}
-                                {canDeactivate && user.status !== 'INACTIVE' && (
-                                  <button
-                                    id={`btn-deactivate-user-${user.id}`}
-                                    className="btn-icon btn-icon-danger"
-                                    title="Deactivate user"
-                                    onClick={() => handleDeactivate(user)}
-                                  >
-                                    🚫
-                                  </button>
+                                {canDeactivate && (
+                                  user.status === 'INACTIVE' ? (
+                                    <button
+                                      id={`btn-reactivate-user-${user.id}`}
+                                      className="btn-icon btn-icon-success"
+                                      title="Reactivate user"
+                                      onClick={() => handleReactivate(user)}
+                                    >
+                                      ✅
+                                    </button>
+                                  ) : (
+                                    <button
+                                      id={`btn-deactivate-user-${user.id}`}
+                                      className="btn-icon btn-icon-danger"
+                                      title="Deactivate user"
+                                      onClick={() => handleDeactivate(user)}
+                                    >
+                                      🚫
+                                    </button>
+                                  )
                                 )}
                               </div>
                             </td>
