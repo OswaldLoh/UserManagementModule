@@ -64,12 +64,13 @@ interface EditUserModalProps {
   activeRole: string;
   canAssignRole: boolean;
   canEditIdentity: boolean;
+  canDeactivate: boolean;
   onClose: () => void;
   onSuccess: (user: User) => void;
   onError: (msg: string) => void;
 }
 
-function EditUserModal({ user, roles, activeRole, canAssignRole, canEditIdentity, onClose, onSuccess, onError }: EditUserModalProps) {
+function EditUserModal({ user, roles, activeRole, canAssignRole, canEditIdentity, canDeactivate, onClose, onSuccess, onError }: EditUserModalProps) {
   const [form, setForm] = useState({
     name: user.name,
     email: user.email,
@@ -189,8 +190,24 @@ function EditUserModal({ user, roles, activeRole, canAssignRole, canEditIdentity
                 </select>
               </div>
               <div className="form-field">
-                <label className="form-label">Status</label>
-                <select id="edit-input-status" className="form-select" name="status" value={form.status} onChange={handleChange} required>
+                <label className="form-label">
+                  Status
+                  {!canDeactivate && (
+                    <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none' }}>
+                      🔒 no permission
+                    </span>
+                  )}
+                </label>
+                <select
+                  id="edit-input-status"
+                  className="form-select"
+                  name="status"
+                  value={form.status}
+                  onChange={handleChange}
+                  disabled={!canDeactivate}
+                  title={!canDeactivate ? 'Your role does not have permission to change user status' : undefined}
+                  required
+                >
                   <option value="ACTIVE">Active</option>
                   <option value="PENDING">Pending</option>
                   <option value="INACTIVE">Inactive</option>
@@ -746,6 +763,7 @@ export default function App() {
           activeRole={activeRole}
           canAssignRole={canAssignRole}
           canEditIdentity={canEditIdentity}
+          canDeactivate={canDeactivate}
           onClose={() => setEditingUser(null)}
           onSuccess={handleUserUpdated}
           onError={handleCreateError}

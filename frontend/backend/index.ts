@@ -138,6 +138,8 @@ app.patch('/api/users/:id', async (req, res) => {
     const canEditIdentity = permissions.includes('user:update-identity');
     // Only allow role changes if the actor has the role:assign permission
     const canAssignRole   = permissions.includes('role:assign');
+    // Only allow status changes if the actor has the user:deactivate permission
+    const canDeactivate   = permissions.includes('user:deactivate');
 
     // Update the record in PostgreSQL using Prisma
     const updatedUser = await prisma.user.update({
@@ -149,7 +151,8 @@ app.patch('/api/users/:id', async (req, res) => {
         position,
         // Conditionally include roleId — omit it entirely if actor cannot assign roles
         ...(canAssignRole ? { roleId: Number(roleId) } : {}),
-        status,
+        // Conditionally include status — omit if actor cannot deactivate/change status
+        ...(canDeactivate ? { status } : {}),
       },
       include: { role: true }, // Return the joined role data
     });
