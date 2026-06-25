@@ -121,6 +121,47 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
+// PUT /api/users/:id - Update a user (Manager or Admin)
+app.put('/api/users/:id', async (req, res) => {
+  const permissions = (req as AuthRequest).userPermissions;
+
+  // RBAC Check: Block anyone without the update permission
+  if (!permissions.includes('user:update')) {
+    return res.status(403).json({ error: 'Forbidden: You do not have permission to edit users.' });
+  }
+
+  try {
+    // Extract the fields the client wants to change
+    const { name, email, department, position, roleId, status } = req.body;
+
+    // Update the record in PostgreSQL using Prisma
+    const updatedUser = await prisma.user.update({
+      where: { id: Number(req.params['id']) },
+      data: {
+        name,
+        email,
+        department,
+        position,
+        roleId: Number(roleId), // Ensure this is a number for Prisma
+        status,
+      },
+      include: { role: true }, // Return the joined role data
+    });
+
+    res.json(updatedUser);
+  } catch (error: any) {
+    // Throws an error (P2002) if a unique constraint (like email) fails
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A user with this email already exists.' });
+    }
+    // Throws an error (P2025) if the record to update is not found
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.status(500).json({ error: 'Failed to update user.' });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
