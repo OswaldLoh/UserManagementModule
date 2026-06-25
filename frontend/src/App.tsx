@@ -57,6 +57,108 @@ function useToasts() {
   return { toasts, addToast };
 }
 
+// ─── Edit User Modal ──────────────────────────────────────────────────────────
+interface EditUserModalProps {
+  user: User;
+  roles: Role[];
+  activeRole: string;
+  onClose: () => void;
+  onSuccess: (user: User) => void;
+  onError: (msg: string) => void;
+}
+
+function EditUserModal({ user, roles, activeRole, onClose, onSuccess, onError }: EditUserModalProps) {
+  const [form, setForm] = useState({
+    name:       user.name,
+    email:      user.email,
+    department: user.department,
+    position:   user.position,
+    roleId:     String(user.roleId),
+    status:     user.status,
+  });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    setForm(prev => ({ ...prev, [e.target.name]: e.target.value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      const res = await axios.put(`${API}/api/users/${user.id}`, form, {
+        headers: { 'x-actor-role': activeRole },
+      });
+      onSuccess(res.data);
+    } catch (err: any) {
+      onError(err.response?.data?.error || 'Failed to update user.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const isValid = form.name && form.email && form.department && form.position && form.roleId && form.status;
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-header">
+          <span className="modal-title">✏️ Edit User</span>
+          <button className="modal-close" onClick={onClose}>×</button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="modal-body">
+            <div className="form-row">
+              <div className="form-field">
+                <label className="form-label">Full Name</label>
+                <input id="edit-input-name" className="form-input" name="name" value={form.name} onChange={handleChange} required />
+              </div>
+              <div className="form-field">
+                <label className="form-label">Email</label>
+                <input id="edit-input-email" className="form-input" name="email" type="email" value={form.email} onChange={handleChange} required />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-field">
+                <label className="form-label">Department</label>
+                <input id="edit-input-department" className="form-input" name="department" value={form.department} onChange={handleChange} required />
+              </div>
+              <div className="form-field">
+                <label className="form-label">Position</label>
+                <input id="edit-input-position" className="form-input" name="position" value={form.position} onChange={handleChange} required />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-field">
+                <label className="form-label">Role</label>
+                <select id="edit-input-role" className="form-select" name="roleId" value={form.roleId} onChange={handleChange} required>
+                  {roles.map(r => (
+                    <option key={r.id} value={r.id}>{r.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="form-field">
+                <label className="form-label">Status</label>
+                <select id="edit-input-status" className="form-select" name="status" value={form.status} onChange={handleChange} required>
+                  <option value="ACTIVE">Active</option>
+                  <option value="PENDING">Pending</option>
+                  <option value="INACTIVE">Inactive</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          <div className="modal-footer">
+            <button type="button" className="btn btn-ghost" onClick={onClose}>Cancel</button>
+            <button id="btn-submit-edit" type="submit" className="btn btn-primary" disabled={!isValid || submitting}>
+              {submitting ? 'Saving…' : 'Save Changes'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 // ─── Add User Modal ───────────────────────────────────────────────────────────
 interface AddUserModalProps {
   roles: Role[];
@@ -153,10 +255,12 @@ export default function App() {
   const [usersError, setUsersError] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(false);
-  const [showModal, setShowModal]   = useState(false);
+  const [showModal, setShowModal]     = useState(false);
+  const [editingUser, setEditingUser] = useState<User | null>(null);
   const [search, setSearch]         = useState('');
   const [filterStatus, setFilterStatus] = useState('');
   const [filterRole,   setFilterRole]   = useState('');
+  const [filterDept,   setFilterDept]   = useState('');
   const { toasts, addToast } = useToasts();
 
   // ── Fetch users ────────────────────────────────────────────────────────────
@@ -204,8 +308,15 @@ export default function App() {
     const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.department.toLowerCase().includes(q);
     const matchStatus = !filterStatus || u.status === filterStatus;
     const matchRole   = !filterRole   || u.role.name === filterRole;
-    return matchSearch && matchStatus && matchRole;
+    const matchDept   = !filterDept   || u.department === filterDept;
+    return matchSearch && matchStatus && matchRole && matchDept;
   });
+
+  const handleUserUpdated = (updated: User) => {
+    setUsers(prev => prev.map(u => u.id === updated.id ? updated : u));
+    setEditingUser(null);
+    addToast(`"${updated.name}" updated successfully.`, 'success');
+  };
 
   const handleUserCreated = (user: User) => {
     setUsers(prev => [...prev, user]);
@@ -224,6 +335,9 @@ export default function App() {
   };
 
   const uniqueRoleNames = [...new Set(users.map(u => u.role.name))];
+  const uniqueDeptNames = [...new Set(users.map(u => u.department))].sort();
+  // Determine if the current actor can edit users
+  const canEdit = !usersError && roles.length > 0;
 
   return (
     <div className="app-layout">
@@ -243,7 +357,7 @@ export default function App() {
               id="role-switcher-select"
               className="role-select"
               value={activeRole}
-              onChange={e => { setActiveRole(e.target.value); setSearch(''); setFilterStatus(''); setFilterRole(''); }}
+              onChange={e => { setActiveRole(e.target.value); setSearch(''); setFilterStatus(''); setFilterRole(''); setFilterDept(''); }}
             >
               {ROLES_LIST.map(r => (
                 <option key={r} value={r}>{r === 'Hacker' ? '⚠️ Hacker (403 test)' : r}</option>
@@ -371,8 +485,17 @@ export default function App() {
                     <option value="">All Roles</option>
                     {uniqueRoleNames.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
-                  {(search || filterStatus || filterRole) && (
-                    <button className="btn btn-ghost" onClick={() => { setSearch(''); setFilterStatus(''); setFilterRole(''); }}>
+                  <select
+                    id="filter-dept"
+                    className="filter-select"
+                    value={filterDept}
+                    onChange={e => setFilterDept(e.target.value)}
+                  >
+                    <option value="">All Departments</option>
+                    {uniqueDeptNames.map(d => <option key={d} value={d}>{d}</option>)}
+                  </select>
+                  {(search || filterStatus || filterRole || filterDept) && (
+                    <button className="btn btn-ghost" onClick={() => { setSearch(''); setFilterStatus(''); setFilterRole(''); setFilterDept(''); }}>
                       ✕ Clear
                     </button>
                   )}
@@ -405,6 +528,7 @@ export default function App() {
                           <th>Position</th>
                           <th>Role</th>
                           <th>Status</th>
+                          <th></th>
                         </tr>
                       </thead>
                       <tbody>
@@ -435,6 +559,18 @@ export default function App() {
                                 <span className="badge-dot"></span>
                                 {user.status.charAt(0) + user.status.slice(1).toLowerCase()}
                               </span>
+                            </td>
+                            <td style={{ width: 48, textAlign: 'center' }}>
+                              {canEdit && (
+                                <button
+                                  id={`btn-edit-user-${user.id}`}
+                                  className="btn-icon"
+                                  title="Edit user"
+                                  onClick={() => setEditingUser(user)}
+                                >
+                                  ✏️
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -490,6 +626,18 @@ export default function App() {
           </>
         )}
       </main>
+
+      {/* ── Edit User Modal ────────────────────────────────────────────────── */}
+      {editingUser && (
+        <EditUserModal
+          user={editingUser}
+          roles={roles}
+          activeRole={activeRole}
+          onClose={() => setEditingUser(null)}
+          onSuccess={handleUserUpdated}
+          onError={handleCreateError}
+        />
+      )}
 
       {/* ── Add User Modal ─────────────────────────────────────────────────── */}
       {showModal && (

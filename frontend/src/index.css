@@ -349,6 +349,27 @@ body {
   border-color: var(--border-glow);
   background: var(--accent-dim);
 }
+.btn-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition);
+  line-height: 1;
+}
+.btn-icon:hover {
+  background: var(--accent-dim);
+  border-color: var(--border-glow);
+  color: var(--accent-light);
+  transform: scale(1.1);
+}
 
 /* ─── Table ─── */
 .table-wrapper {
