@@ -7,7 +7,7 @@ A User Access Management (UAM) dashboard built in React + TypeScript with an Exp
 ## Getting Started
 
 ### Prerequisites
-- **Node.js** (v18 or newer recommended)
+- **Node.js** 
 - **PostgreSQL** 
 
 ---
@@ -86,3 +86,15 @@ npm run dev
 Open your browser and navigate to `http://localhost:5174/` (or the local port shown in your terminal) to view the User Access Management portal.
 
 ---
+
+## Assumptions
+
+- Filtering and searching are done in the server-side for quicker performance without repeatedly waiting for responses from the server
+
+- New users created are automatically assigned the 'ACTIVE' status
+
+## Additional Features
+
+- Additional role permissions such as user:update-identity was added for more granular restrictions on editing user details between different roles
+
+- A PATCH API endpoint was created for both the deactivate and reactivate mechanism and linked to a UI button for a smoother and direct process
