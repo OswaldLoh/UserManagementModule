@@ -121,8 +121,8 @@ app.post('/api/users', async (req, res) => {
   }
 });
 
-// PUT /api/users/:id - Update a user (Manager or Admin)
-app.put('/api/users/:id', async (req, res) => {
+// PATCH /api/users/:id - Update a user (Manager or Admin)
+app.patch('/api/users/:id', async (req, res) => {
   const permissions = (req as AuthRequest).userPermissions;
 
   // RBAC Check: Block anyone without the update permission

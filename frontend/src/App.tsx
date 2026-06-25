@@ -34,7 +34,7 @@ const API = 'http://localhost:3000';
 
 // Avatar color palette
 const AVATAR_COLORS = [
-  '#8b5cf6','#6366f1','#3b82f6','#10b981','#f59e0b','#ef4444','#ec4899','#14b8a6',
+  '#8b5cf6', '#6366f1', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#14b8a6',
 ];
 function avatarColor(name: string) {
   let hash = 0;
@@ -71,12 +71,12 @@ interface EditUserModalProps {
 
 function EditUserModal({ user, roles, activeRole, canAssignRole, canEditIdentity, onClose, onSuccess, onError }: EditUserModalProps) {
   const [form, setForm] = useState({
-    name:       user.name,
-    email:      user.email,
+    name: user.name,
+    email: user.email,
     department: user.department,
-    position:   user.position,
-    roleId:     String(user.roleId),
-    status:     user.status,
+    position: user.position,
+    roleId: String(user.roleId),
+    status: user.status,
   });
   const [submitting, setSubmitting] = useState(false);
 
@@ -88,7 +88,7 @@ function EditUserModal({ user, roles, activeRole, canAssignRole, canEditIdentity
     e.preventDefault();
     setSubmitting(true);
     try {
-      const res = await axios.put(`${API}/api/users/${user.id}`, form, {
+      const res = await axios.patch(`${API}/api/users/${user.id}`, form, {
         headers: { 'x-actor-role': activeRole },
       });
       onSuccess(res.data);
@@ -300,18 +300,18 @@ const ROLES_LIST = ['Admin', 'Manager', 'Viewer', 'Hacker'];
 
 export default function App() {
   const [activeRole, setActiveRole] = useState('Admin');
-  const [activeTab, setActiveTab]   = useState<'users' | 'roles'>('users');
-  const [users, setUsers]           = useState<User[]>([]);
-  const [roles, setRoles]           = useState<Role[]>([]);
+  const [activeTab, setActiveTab] = useState<'users' | 'roles'>('users');
+  const [users, setUsers] = useState<User[]>([]);
+  const [roles, setRoles] = useState<Role[]>([]);
   const [usersError, setUsersError] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [loadingRoles, setLoadingRoles] = useState(false);
-  const [showModal, setShowModal]     = useState(false);
+  const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
-  const [search, setSearch]         = useState('');
+  const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
-  const [filterRole,   setFilterRole]   = useState('');
-  const [filterDept,   setFilterDept]   = useState('');
+  const [filterRole, setFilterRole] = useState('');
+  const [filterDept, setFilterDept] = useState('');
   const { toasts, addToast } = useToasts();
 
   // ── Fetch users ────────────────────────────────────────────────────────────
@@ -349,17 +349,17 @@ export default function App() {
   useEffect(() => { fetchUsers(); fetchRoles(); }, [fetchUsers, fetchRoles]);
 
   // ── Derived stats ──────────────────────────────────────────────────────────
-  const totalActive   = users.filter(u => u.status === 'ACTIVE').length;
+  const totalActive = users.filter(u => u.status === 'ACTIVE').length;
   const totalInactive = users.filter(u => u.status === 'INACTIVE').length;
-  const totalPending  = users.filter(u => u.status === 'PENDING').length;
+  const totalPending = users.filter(u => u.status === 'PENDING').length;
 
   // ── Filtered users ─────────────────────────────────────────────────────────
   const filteredUsers = users.filter(u => {
     const q = search.toLowerCase();
     const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.department.toLowerCase().includes(q) || u.position.toLowerCase().includes(q);
     const matchStatus = !filterStatus || u.status === filterStatus;
-    const matchRole   = !filterRole   || u.role.name === filterRole;
-    const matchDept   = !filterDept   || u.department === filterDept;
+    const matchRole = !filterRole || u.role.name === filterRole;
+    const matchDept = !filterDept || u.department === filterDept;
     return matchSearch && matchStatus && matchRole && matchDept;
   });
 
@@ -406,7 +406,7 @@ export default function App() {
   };
 
   const statusBadgeClass = (status: string) => {
-    if (status === 'ACTIVE')   return 'badge badge-active';
+    if (status === 'ACTIVE') return 'badge badge-active';
     if (status === 'INACTIVE') return 'badge badge-inactive';
     return 'badge badge-pending';
   };
@@ -416,14 +416,14 @@ export default function App() {
 
   // Derive what the active actor is allowed to do, based on their role's DB permissions
   const activeRoleData = roles.find(r => r.name === activeRole);
-  const hasPermission  = (resource: string, action: string) =>
+  const hasPermission = (resource: string, action: string) =>
     activeRoleData?.permissions.some(rp =>
       rp.permission.resource === resource && rp.permission.action === action
     ) ?? false;
-  const canCreate        = hasPermission('user', 'create');
-  const canAssignRole    = hasPermission('role', 'assign');
-  const canEditIdentity  = hasPermission('user', 'update-identity');
-  const canDeactivate    = hasPermission('user', 'deactivate');
+  const canCreate = hasPermission('user', 'create');
+  const canAssignRole = hasPermission('role', 'assign');
+  const canEditIdentity = hasPermission('user', 'update-identity');
+  const canDeactivate = hasPermission('user', 'deactivate');
   // Determine if the current actor can edit users
   const canEdit = !usersError && roles.length > 0 && hasPermission('user', 'update');
 
@@ -463,13 +463,13 @@ export default function App() {
             <h1>User Management</h1>
             <p>Manage team members and access permissions across your organisation.</p>
           </div>
-          {activeTab === 'users' && canCreate && (
+          {activeTab === 'users' && (
             <button
               id="btn-add-user"
               className="btn btn-primary"
               onClick={() => setShowModal(true)}
-              disabled={loadingUsers || !!usersError}
-              title="Add a new user"
+              disabled={loadingUsers || !!usersError || !canCreate}
+              title={!canCreate ? 'Your role does not have permission to add users' : 'Add a new user'}
             >
               ＋ Add User
             </button>
