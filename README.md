@@ -83,7 +83,7 @@ Launch the Vite development server:
 ```bash
 npm run dev
 ```
-Open your browser and navigate to `http://localhost:5174/` (or the local port shown in your terminal) to view the User Access Management portal.
+Open your browser and navigate to the local port shown in your terminal to view the User Access Management portal.
 
 ---
 
