@@ -62,12 +62,14 @@ interface EditUserModalProps {
   user: User;
   roles: Role[];
   activeRole: string;
+  canAssignRole: boolean;
+  canEditIdentity: boolean;
   onClose: () => void;
   onSuccess: (user: User) => void;
   onError: (msg: string) => void;
 }
 
-function EditUserModal({ user, roles, activeRole, onClose, onSuccess, onError }: EditUserModalProps) {
+function EditUserModal({ user, roles, activeRole, canAssignRole, canEditIdentity, onClose, onSuccess, onError }: EditUserModalProps) {
   const [form, setForm] = useState({
     name:       user.name,
     email:      user.email,
@@ -110,12 +112,45 @@ function EditUserModal({ user, roles, activeRole, onClose, onSuccess, onError }:
           <div className="modal-body">
             <div className="form-row">
               <div className="form-field">
-                <label className="form-label">Full Name</label>
-                <input id="edit-input-name" className="form-input" name="name" value={form.name} onChange={handleChange} required />
+                <label className="form-label">
+                  Full Name
+                  {!canEditIdentity && (
+                    <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none' }}>
+                      🔒 no permission
+                    </span>
+                  )}
+                </label>
+                <input
+                  id="edit-input-name"
+                  className="form-input"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  disabled={!canEditIdentity}
+                  title={!canEditIdentity ? 'Your role cannot edit name or email' : undefined}
+                  required
+                />
               </div>
               <div className="form-field">
-                <label className="form-label">Email</label>
-                <input id="edit-input-email" className="form-input" name="email" type="email" value={form.email} onChange={handleChange} required />
+                <label className="form-label">
+                  Email
+                  {!canEditIdentity && (
+                    <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none' }}>
+                      🔒 no permission
+                    </span>
+                  )}
+                </label>
+                <input
+                  id="edit-input-email"
+                  className="form-input"
+                  name="email"
+                  type="email"
+                  value={form.email}
+                  onChange={handleChange}
+                  disabled={!canEditIdentity}
+                  title={!canEditIdentity ? 'Your role cannot edit name or email' : undefined}
+                  required
+                />
               </div>
             </div>
             <div className="form-row">
@@ -130,8 +165,24 @@ function EditUserModal({ user, roles, activeRole, onClose, onSuccess, onError }:
             </div>
             <div className="form-row">
               <div className="form-field">
-                <label className="form-label">Role</label>
-                <select id="edit-input-role" className="form-select" name="roleId" value={form.roleId} onChange={handleChange} required>
+                <label className="form-label">
+                  Role
+                  {!canAssignRole && (
+                    <span style={{ marginLeft: 6, fontSize: 10, color: 'var(--text-muted)', fontWeight: 400, textTransform: 'none' }}>
+                      🔒 no permission
+                    </span>
+                  )}
+                </label>
+                <select
+                  id="edit-input-role"
+                  className="form-select"
+                  name="roleId"
+                  value={form.roleId}
+                  onChange={handleChange}
+                  disabled={!canAssignRole}
+                  title={!canAssignRole ? 'Your role does not have permission to change user roles' : undefined}
+                  required
+                >
                   {roles.map(r => (
                     <option key={r.id} value={r.id}>{r.name}</option>
                   ))}
@@ -305,7 +356,7 @@ export default function App() {
   // ── Filtered users ─────────────────────────────────────────────────────────
   const filteredUsers = users.filter(u => {
     const q = search.toLowerCase();
-    const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.department.toLowerCase().includes(q);
+    const matchSearch = !q || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q) || u.department.toLowerCase().includes(q) || u.position.toLowerCase().includes(q);
     const matchStatus = !filterStatus || u.status === filterStatus;
     const matchRole   = !filterRole   || u.role.name === filterRole;
     const matchDept   = !filterDept   || u.department === filterDept;
@@ -336,8 +387,18 @@ export default function App() {
 
   const uniqueRoleNames = [...new Set(users.map(u => u.role.name))];
   const uniqueDeptNames = [...new Set(users.map(u => u.department))].sort();
-  // Determine if the current actor can edit users
-  const canEdit = !usersError && roles.length > 0;
+
+  // Derive what the active actor is allowed to do, based on their role's DB permissions
+  const activeRoleData = roles.find(r => r.name === activeRole);
+  const hasPermission  = (resource: string, action: string) =>
+    activeRoleData?.permissions.some(rp =>
+      rp.permission.resource === resource && rp.permission.action === action
+    ) ?? false;
+  const canCreate        = hasPermission('user', 'create');
+  const canAssignRole    = hasPermission('role', 'assign');
+  const canEditIdentity  = hasPermission('user', 'update-identity');
+  // Determine if the current actor can edit users (requires user:update permission)
+  const canEdit = !usersError && roles.length > 0 && hasPermission('user', 'update');
 
   return (
     <div className="app-layout">
@@ -375,13 +436,13 @@ export default function App() {
             <h1>User Management</h1>
             <p>Manage team members and access permissions across your organisation.</p>
           </div>
-          {activeTab === 'users' && (
+          {activeTab === 'users' && canCreate && (
             <button
               id="btn-add-user"
               className="btn btn-primary"
               onClick={() => setShowModal(true)}
               disabled={loadingUsers || !!usersError}
-              title={usersError ? 'Cannot add user — insufficient permissions' : 'Add a new user'}
+              title="Add a new user"
             >
               ＋ Add User
             </button>
@@ -459,7 +520,7 @@ export default function App() {
                   <input
                     id="search-users"
                     className="search-input"
-                    placeholder="Search by name, email, or dept…"
+                    placeholder="Search by name, email, dept or position…"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                   />
@@ -633,6 +694,8 @@ export default function App() {
           user={editingUser}
           roles={roles}
           activeRole={activeRole}
+          canAssignRole={canAssignRole}
+          canEditIdentity={canEditIdentity}
           onClose={() => setEditingUser(null)}
           onSuccess={handleUserUpdated}
           onError={handleCreateError}

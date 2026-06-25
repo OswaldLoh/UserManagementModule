@@ -634,7 +634,7 @@ body {
 }
 
 /* ─── Form Fields ─── */
-.form-field { display: flex; flex-direction: column; gap: 6px; }
+.form-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .form-label {
   font-size: 12px;
   font-weight: 600;
@@ -643,6 +643,8 @@ body {
   letter-spacing: 0.5px;
 }
 .form-input, .form-select {
+  width: 100%;
+  box-sizing: border-box;
   background: var(--bg-surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);

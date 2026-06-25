@@ -134,15 +134,21 @@ app.put('/api/users/:id', async (req, res) => {
     // Extract the fields the client wants to change
     const { name, email, department, position, roleId, status } = req.body;
 
+    // Only allow identity changes if the actor has the update-identity permission
+    const canEditIdentity = permissions.includes('user:update-identity');
+    // Only allow role changes if the actor has the role:assign permission
+    const canAssignRole   = permissions.includes('role:assign');
+
     // Update the record in PostgreSQL using Prisma
     const updatedUser = await prisma.user.update({
       where: { id: Number(req.params['id']) },
       data: {
-        name,
-        email,
+        // Conditionally include name/email — omit if actor cannot edit identity
+        ...(canEditIdentity ? { name, email } : {}),
         department,
         position,
-        roleId: Number(roleId), // Ensure this is a number for Prisma
+        // Conditionally include roleId — omit it entirely if actor cannot assign roles
+        ...(canAssignRole ? { roleId: Number(roleId) } : {}),
         status,
       },
       include: { role: true }, // Return the joined role data

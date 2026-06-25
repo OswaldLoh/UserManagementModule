@@ -10,32 +10,47 @@ const prisma = new PrismaClient({ adapter });
 async function main() {
   // ── 1. PERMISSIONS ──────────────────────────────────────────────
   const permissions = await Promise.all([
-    prisma.permission.upsert({ where: { resource_action: { resource: 'user', action: 'read'       } }, update: {}, create: { resource: 'user', action: 'read',       label: 'View Users'        } }),
-    prisma.permission.upsert({ where: { resource_action: { resource: 'user', action: 'create'     } }, update: {}, create: { resource: 'user', action: 'create',     label: 'Create Users'      } }),
-    prisma.permission.upsert({ where: { resource_action: { resource: 'user', action: 'update'     } }, update: {}, create: { resource: 'user', action: 'update',     label: 'Edit Users'        } }),
-    prisma.permission.upsert({ where: { resource_action: { resource: 'user', action: 'deactivate' } }, update: {}, create: { resource: 'user', action: 'deactivate', label: 'Deactivate Users'  } }),
-    prisma.permission.upsert({ where: { resource_action: { resource: 'role', action: 'read'       } }, update: {}, create: { resource: 'role', action: 'read',       label: 'View Roles'        } }),
-    prisma.permission.upsert({ where: { resource_action: { resource: 'role', action: 'assign'     } }, update: {}, create: { resource: 'role', action: 'assign',     label: 'Assign Roles'      } }),
+    prisma.permission.upsert({ where: { resource_action: { resource: 'user', action: 'read'            } }, update: {}, create: { resource: 'user', action: 'read',            label: 'View Users'          } }),
+    prisma.permission.upsert({ where: { resource_action: { resource: 'user', action: 'create'          } }, update: {}, create: { resource: 'user', action: 'create',          label: 'Create Users'        } }),
+    prisma.permission.upsert({ where: { resource_action: { resource: 'user', action: 'update'          } }, update: {}, create: { resource: 'user', action: 'update',          label: 'Edit Users'          } }),
+    prisma.permission.upsert({ where: { resource_action: { resource: 'user', action: 'update-identity' } }, update: {}, create: { resource: 'user', action: 'update-identity', label: 'Edit Name & Email'    } }),
+    prisma.permission.upsert({ where: { resource_action: { resource: 'user', action: 'deactivate'      } }, update: {}, create: { resource: 'user', action: 'deactivate',      label: 'Deactivate Users'    } }),
+    prisma.permission.upsert({ where: { resource_action: { resource: 'role', action: 'read'            } }, update: {}, create: { resource: 'role', action: 'read',            label: 'View Roles'          } }),
+    prisma.permission.upsert({ where: { resource_action: { resource: 'role', action: 'assign'          } }, update: {}, create: { resource: 'role', action: 'assign',          label: 'Assign Roles'        } }),
   ]);
 
-  const [pUserRead, pUserCreate, pUserUpdate, pUserDeactivate, pRoleRead, pRoleAssign] = permissions;
+  const [pUserRead, pUserCreate, pUserUpdate, pUserUpdateIdentity, pUserDeactivate, pRoleRead, pRoleAssign] = permissions;
 
   // ── 2. ROLES ─────────────────────────────────────────────────────
   const admin = await prisma.role.upsert({
     where: { name: 'Admin' },
-    update: {},
+    update: {
+      permissions: {
+        deleteMany: {},
+        create: [
+          { permission: { connect: { id: pUserRead!.id           } } },
+          { permission: { connect: { id: pUserCreate!.id         } } },
+          { permission: { connect: { id: pUserUpdate!.id         } } },
+          { permission: { connect: { id: pUserUpdateIdentity!.id } } },
+          { permission: { connect: { id: pUserDeactivate!.id     } } },
+          { permission: { connect: { id: pRoleRead!.id           } } },
+          { permission: { connect: { id: pRoleAssign!.id         } } },
+        ],
+      },
+    },
     create: {
       name: 'Admin',
       description: 'Full access to all resources',
       isSystem: true,
       permissions: {
         create: [
-          { permission: { connect: { id: pUserRead!.id       } } },
-          { permission: { connect: { id: pUserCreate!.id     } } },
-          { permission: { connect: { id: pUserUpdate!.id     } } },
-          { permission: { connect: { id: pUserDeactivate!.id } } },
-          { permission: { connect: { id: pRoleRead!.id       } } },
-          { permission: { connect: { id: pRoleAssign!.id     } } },
+          { permission: { connect: { id: pUserRead!.id           } } },
+          { permission: { connect: { id: pUserCreate!.id         } } },
+          { permission: { connect: { id: pUserUpdate!.id         } } },
+          { permission: { connect: { id: pUserUpdateIdentity!.id } } },
+          { permission: { connect: { id: pUserDeactivate!.id     } } },
+          { permission: { connect: { id: pRoleRead!.id           } } },
+          { permission: { connect: { id: pRoleAssign!.id         } } },
         ],
       },
     },
@@ -43,22 +58,32 @@ async function main() {
 
   const manager = await prisma.role.upsert({
     where: { name: 'Manager' },
-    update: {},
+    update: {
+      description: 'Can edit users but cannot create, deactivate, or assign roles',
+      permissions: {
+        // Wipe existing RolePermission rows then recreate with the correct set
+        deleteMany: {},
+        create: [
+          { permission: { connect: { id: pUserRead!.id   } } },
+          { permission: { connect: { id: pUserUpdate!.id } } },
+          { permission: { connect: { id: pRoleRead!.id   } } },
+        ],
+      },
+    },
     create: {
       name: 'Manager',
-      description: 'Can manage users but cannot assign roles',
+      description: 'Can edit users but cannot create, deactivate, or assign roles',
       isSystem: false,
       permissions: {
         create: [
-          { permission: { connect: { id: pUserRead!.id       } } },
-          { permission: { connect: { id: pUserCreate!.id     } } },
-          { permission: { connect: { id: pUserUpdate!.id     } } },
-          { permission: { connect: { id: pUserDeactivate!.id } } },
-          { permission: { connect: { id: pRoleRead!.id       } } },
+          { permission: { connect: { id: pUserRead!.id   } } },
+          { permission: { connect: { id: pUserUpdate!.id } } },
+          { permission: { connect: { id: pRoleRead!.id   } } },
         ],
       },
     },
   });
+
 
   const viewer = await prisma.role.upsert({
     where: { name: 'Viewer' },
@@ -99,7 +124,7 @@ async function main() {
     });
   }
 
-  console.log('✅ Seed complete: 3 roles, 6 permissions, 8 users inserted.');
+  console.log('✅ Seed complete: 3 roles, 7 permissions, 8 users inserted.');
 }
 
 main()
