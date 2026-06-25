@@ -552,7 +552,7 @@ export default function App() {
                     onChange={e => setSearch(e.target.value)}
                   />
                 </div>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <div className="filters-group">
                   <select
                     id="filter-status"
                     className="filter-select"
