@@ -85,6 +85,42 @@ app.get('/api/roles', async (req, res) => {
   }
 });
 
+// POST /api/users - Create a user (Admin only)
+app.post('/api/users', async (req, res) => {
+  const permissions = (req as any).userPermissions;
+  
+  // RBAC Check: Block anyone without the create permission
+  if (!permissions.includes('user:create')) {
+    return res.status(403).json({ error: 'Forbidden: You do not have permission to create users.' });
+  }
+
+  try {
+    // Extract the data sent from the React form
+    const { name, email, department, position, roleId } = req.body;
+
+    // Save to PostgreSQL using Prisma
+    const newUser = await prisma.user.create({
+      data: {
+        name,
+        email,
+        department,
+        position,
+        roleId: Number(roleId), // Ensure this is a number for Prisma
+        status: 'ACTIVE'        // Default status for new hires
+      },
+      include: { role: true }   // Return the joined role data
+    });
+
+    res.status(201).json(newUser);
+  } catch (error: any) {
+    // Throws an error (P2002) if a unique constraint (like email) fails
+    if (error.code === 'P2002') {
+      return res.status(400).json({ error: 'A user with this email already exists.' });
+    }
+    res.status(500).json({ error: 'Failed to create user.' });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);
