@@ -168,6 +168,33 @@ app.put('/api/users/:id', async (req, res) => {
   }
 });
 
+// PATCH /api/users/:id/deactivate - Archive a user (Admin only)
+app.patch('/api/users/:id/deactivate', async (req, res) => {
+  const permissions = (req as AuthRequest).userPermissions;
+
+  // RBAC Check: Block anyone without the deactivate permission
+  if (!permissions.includes('user:deactivate')) {
+    return res.status(403).json({ error: 'Forbidden: You do not have permission to deactivate users.' });
+  }
+
+  try {
+    // Only flip the status field — everything else stays untouched
+    const deactivatedUser = await prisma.user.update({
+      where: { id: Number(req.params['id']) },
+      data: { status: 'INACTIVE' },
+      include: { role: true },
+    });
+
+    res.json(deactivatedUser);
+  } catch (error: any) {
+    // Throws an error (P2025) if the record to update is not found
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'User not found.' });
+    }
+    res.status(500).json({ error: 'Failed to deactivate user.' });
+  }
+});
+
 // Start the server
 app.listen(PORT, () => {
   console.log(`Server is running on http://localhost:${PORT}`);

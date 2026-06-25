@@ -369,6 +369,19 @@ export default function App() {
     addToast(`"${updated.name}" updated successfully.`, 'success');
   };
 
+  const handleDeactivate = async (user: User) => {
+    if (!window.confirm(`Deactivate "${user.name}"? Their status will be set to Inactive.`)) return;
+    try {
+      const res = await axios.patch(`${API}/api/users/${user.id}/deactivate`, {}, {
+        headers: { 'x-actor-role': activeRole },
+      });
+      setUsers(prev => prev.map(u => u.id === res.data.id ? res.data : u));
+      addToast(`"${user.name}" has been deactivated.`, 'success');
+    } catch (err: any) {
+      addToast(err.response?.data?.error || 'Failed to deactivate user.', 'error');
+    }
+  };
+
   const handleUserCreated = (user: User) => {
     setUsers(prev => [...prev, user]);
     setShowModal(false);
@@ -397,8 +410,9 @@ export default function App() {
   const canCreate        = hasPermission('user', 'create');
   const canAssignRole    = hasPermission('role', 'assign');
   const canEditIdentity  = hasPermission('user', 'update-identity');
-  // Determine if the current actor can edit users (requires user:update permission)
-  const canEdit = !usersError && roles.length > 0 && hasPermission('user', 'update');
+  const canDeactivate    = hasPermission('user', 'deactivate');
+  // Determine if the current actor can edit users
+  const canEdit = !usersError && roles.length > 0;
 
   return (
     <div className="app-layout">
@@ -621,17 +635,29 @@ export default function App() {
                                 {user.status.charAt(0) + user.status.slice(1).toLowerCase()}
                               </span>
                             </td>
-                            <td style={{ width: 48, textAlign: 'center' }}>
-                              {canEdit && (
-                                <button
-                                  id={`btn-edit-user-${user.id}`}
-                                  className="btn-icon"
-                                  title="Edit user"
-                                  onClick={() => setEditingUser(user)}
-                                >
-                                  ✏️
-                                </button>
-                              )}
+                            <td style={{ width: 88, textAlign: 'center' }}>
+                              <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                                {canEdit && (
+                                  <button
+                                    id={`btn-edit-user-${user.id}`}
+                                    className="btn-icon"
+                                    title="Edit user"
+                                    onClick={() => setEditingUser(user)}
+                                  >
+                                    ✏️
+                                  </button>
+                                )}
+                                {canDeactivate && user.status !== 'INACTIVE' && (
+                                  <button
+                                    id={`btn-deactivate-user-${user.id}`}
+                                    className="btn-icon btn-icon-danger"
+                                    title="Deactivate user"
+                                    onClick={() => handleDeactivate(user)}
+                                  >
+                                    🚫
+                                  </button>
+                                )}
+                              </div>
                             </td>
                           </tr>
                         ))}

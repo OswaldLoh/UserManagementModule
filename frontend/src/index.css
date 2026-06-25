@@ -370,6 +370,12 @@ body {
   color: var(--accent-light);
   transform: scale(1.1);
 }
+.btn-icon-danger:hover {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.4);
+  color: var(--red);
+  transform: scale(1.1);
+}
 
 /* ─── Table ─── */
 .table-wrapper {
