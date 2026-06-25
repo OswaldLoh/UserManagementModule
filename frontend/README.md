@@ -93,6 +93,8 @@ Open your browser and navigate to `http://localhost:5174/` (or the local port sh
 
 - New users created are automatically assigned the 'ACTIVE' status
 
+- While the backend returns 403 Error for unauthorized actions, the frontend assists by changing UI states to block the user from an unauthorized action
+
 ## Additional Features
 
 - Additional role permissions such as user:update-identity was added for more granular restrictions on editing user details between different roles
